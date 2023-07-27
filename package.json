@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-oauth-server": "^2.0.0",
+    "mongoose": "^7.4.1",
+    "oauth2-server": "^3.1.1",
+    "pg-promise": "^11.5.1",
+    "prisma": "^5.0.0"
+  },
+  "name": "oauth",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/express-oauth-server": "^2.0.4",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^20.4.5",
+    "@types/oauth2-server": "^3.0.13",
+    "@types/pg-promise": "^5.4.3",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  },
+  "scripts": {
+    "build": "rm -rf ./build && tsc",
+    "start": "nodemon"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
