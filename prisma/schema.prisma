@@ -45,12 +45,16 @@ model Translate {
 }
 
 model Token {
-  accessToken        String   @unique
-  accessTokenExpires DateTime
-  client             Client   @relation(fields: [clientId], references: [id])
-  clientId           Int
-  user               User     @relation(fields: [userId], references: [id])
-  userId             Int
+  accessToken         String   @unique
+  accessTokenExpires  DateTime
+  refreshToken        String   @unique // adicionado
+  refreshTokenExpires DateTime // adicionado
+  client              Client   @relation(fields: [clientId], references: [id])
+  clientId            Int
+  user                User     @relation(fields: [userId], references: [id])
+  userId              Int
+  scope               String
+  revoked             Boolean  @default(false)
 
   @@index([clientId])
   @@index([userId])

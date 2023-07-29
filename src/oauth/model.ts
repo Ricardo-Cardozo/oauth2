@@ -1,5 +1,6 @@
 import prismadb from "../lib/prismadb";
 import { User, Client } from "@prisma/client";
+import { compare } from "bcrypt";
 
 /* 
   A função getClientData é uma função
@@ -9,7 +10,7 @@ import { User, Client } from "@prisma/client";
 const getClientData = (client: Client) => ({
   id: client.id.toString(),
   clientSecret: client.secret,
-  grants: ["password"],
+  grants: ["password", "refresh_token"],
 
   /*
    No contexto deste código, a lista de "grants" é definida 
@@ -29,7 +30,10 @@ const getClientData = (client: Client) => ({
 const getUserData = (user: User) => ({
   id: user.id.toString(),
   username: user.username,
+  type: user.type,
 });
+
+
 
 const model = {
   // Função para pegar o Client
@@ -55,13 +59,29 @@ const model = {
   getUser: async function (username: string, password: string) {
     console.log("Função getUser acionado");
 
+    console.log("username: ", username);
+    console.log("password: ", password);
+
     const user = await prismadb.user.findUnique({
       where: { username: username },
     });
 
-    if (!user || user.password !== password) {
+    console.log("retorno do usuário: ", user);
+
+    if (!user) {
+      console.log("Usuário não encontrado!");
       return null;
     }
+
+    // Use bcrypt para verificar a senha
+    const match = await compare(password, user.password);
+
+    if (!match) {
+      console.log("Senha incorreta!");
+      return null;
+    }
+
+    console.log("retorno getUserData: ", getUserData(user));
 
     return getUserData(user);
   },
@@ -70,12 +90,17 @@ const model = {
   saveToken: async function (token: any, client: any, user: any) {
     console.log("Função saveToken acionado");
 
+    console.log("Retorno type: ", user.type);
+
     const createdToken = await prismadb.token.create({
       data: {
         accessToken: token.accessToken,
         accessTokenExpires: token.accessTokenExpiresAt,
-        client: { connect: { id: Number(client.id) } }, // converta de volta para número
-        user: { connect: { id: Number(user.id) } }, // converta de volta para número
+        refreshToken: token.refreshToken, // adicionado
+        refreshTokenExpires: token.refreshTokenExpiresAt, // adicionado
+        client: { connect: { id: Number(client.id) } },
+        user: { connect: { id: Number(user.id) } },
+        scope: user.type,
       },
     });
 
@@ -85,6 +110,7 @@ const model = {
       ...token,
       client: getClientData(client),
       user: getUserData(user),
+      scope: user.type,
     };
   },
 
@@ -109,7 +135,44 @@ const model = {
       client: getClientData(token.client),
       user: getUserData(token.user),
       accessTokenExpiresAt: token.accessTokenExpires,
+      scope: token.scope, // adicione o escopo do token
     };
+  },
+
+  // Função para pegar o refresh token
+  getRefreshToken: async function (refreshToken: string) {
+    console.log("Função getRefreshToken acionado");
+    const token = await prismadb.token.findUnique({
+      where: { refreshToken: refreshToken },
+      include: {
+        user: true,
+        client: true,
+      },
+    });
+
+    if (!token) {
+      console.log("Refresh Token não encontrado!");
+      return null;
+    }
+
+    return {
+      accessToken: token.accessToken, // incluir isso
+      refreshToken: token.refreshToken,
+      client: getClientData(token.client),
+      user: getUserData(token.user),
+      refreshTokenExpiresAt: token.refreshTokenExpires,
+      scope: token.scope,
+    };
+},
+
+
+  revokeToken: async function (token: any) {
+    const revokedToken = await prismadb.token.update({
+      where: { accessToken: token.accessToken },
+      data: { revoked: true },
+    });
+
+    return !!revokedToken; // retorna um booleano: true se o token foi revogado com sucesso, false caso contrário
   },
 
   /*
@@ -117,10 +180,17 @@ const model = {
    e não está realmente verificando nada. Em um cenário real, a função verifyScope seria 
    responsável por verificar se o token fornece 
    as permissões ("scopes") necessárias para realizar uma ação específica.
-  */
+   */
   verifyScope: async function (token: any, scope: any) {
     console.log("Função verifyScope acionado");
-    return true;
+
+    // Verifique se o escopo do token é o escopo requerido
+    if (token.scope === scope) {
+      return true;
+    }
+
+    console.log("Escopo do token inválido!");
+    return false;
   },
 };
 
