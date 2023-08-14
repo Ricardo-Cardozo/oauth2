@@ -47,8 +47,8 @@ model Translate {
 model Token {
   accessToken         String   @unique
   accessTokenExpires  DateTime
-  refreshToken        String   @unique // adicionado
-  refreshTokenExpires DateTime // adicionado
+  refreshToken        String   @unique
+  refreshTokenExpires DateTime
   client              Client   @relation(fields: [clientId], references: [id])
   clientId            Int
   user                User     @relation(fields: [userId], references: [id])

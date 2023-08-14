@@ -3,7 +3,7 @@ import model from "./model";
 
 const oauth = new OAuthServer({
   model: model,
-  accessTokenLifetime: 60 * 60 * 24, // 24 hours, or 1 day
+  accessTokenLifetime: 60 * 60 * 24,
   allowEmptyState: false,
   allowExtendedTokenAttributes: true,
 });

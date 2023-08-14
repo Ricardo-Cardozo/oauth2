@@ -2,11 +2,44 @@ import express, { Request, Response, NextFunction } from "express";
 import oauthServer from "./oauth/server";
 import model from "./oauth/model";
 import prismadb from "./lib/prismadb";
+import cors from "cors";
+import refreshTokenIfExpired from "./middleware/refresh-token-if-expired";
+import { compare, genSalt, hash } from "bcrypt";
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const corsOptions = {
+  origin: "*",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+app.post("/newuser", async (req: Request, res: Response) => {
+  const { username, password, name, status, type, id = 1 } = req.body;
+
+  const salt = await genSalt(12);
+  const passwordHash = await hash(password, salt);
+
+  const user = await prismadb.user.create({
+    data: {
+      name,
+      username,
+      password: passwordHash,
+      status,
+      type,
+      idUserCreated: id,
+      idUserUpdated: id,
+    },
+  });
+
+  return res.status(200).json({ user, message: "Usuário criado com sucesso" });
+});
 
 app.post(
   "/auth/login",
@@ -17,19 +50,42 @@ app.post(
     const { authorization } = req.headers;
 
     if (!username || !password || !authorization) {
+      console.log(
+        "Username, senha e cabeçalho de autorização são obrigatórios."
+      );
       return res.status(400).json({
-        message: "Username, senha e cabeçalho de autorização são obrigatórios",
+        message: "Username, senha e cabeçalho de autorização são obrigatórios.",
       });
     }
 
-    // Extrai o ID do cliente e o segredo do cliente do cabeçalho de autorização
+    const userExists = await prismadb.user.findUnique({
+      where: { username: username },
+    });
+
+    if (!userExists) {
+      console.log("Username, não encontrado.");
+      return res.status(400).json({
+        message: "Username, não encontrado.",
+      });
+    }
+
+    console.log(userExists.password);
+
+    const match = await compare(password, userExists.password);
+
+    if (!match) {
+      console.log("Senha incorreta!");
+      return res.status(400).json({
+        message: "Senha incorreta.",
+      });
+    }
+
     const credentials = Buffer.from(authorization.split(" ")[1], "base64")
       .toString("utf8")
       .split(":");
     const clientId = credentials[0];
     const clientSecret = credentials[1];
 
-    // Adicione o ID do cliente, o segredo do cliente e o tipo de concessão ao corpo da solicitação
     req.body.client_id = clientId;
     req.body.client_secret = clientSecret;
     req.body.grant_type = "password";
@@ -42,6 +98,7 @@ app.post(
 
 app.get(
   "/protected",
+  refreshTokenIfExpired,
   oauthServer.authenticate(),
   async (req: Request, res: Response, next: NextFunction) => {
     const { authorization } = req.headers;
@@ -66,11 +123,9 @@ app.get(
     next();
   },
   (req, res) => {
-    // Se chegarmos a este ponto, a solicitação é válida e o token de acesso foi verificado.
     res.json({ message: "Esta é uma rota protegida." });
   }
 );
-
 
 app.get("/", async (req: Request, res: Response) => {
   return res.json({ message: "Olá mundo" });
@@ -78,6 +133,7 @@ app.get("/", async (req: Request, res: Response) => {
 
 app.get(
   "/admin_only",
+  refreshTokenIfExpired,
   oauthServer.authenticate({ scope: "admin" }),
   async (req: Request, res: Response, next: NextFunction) => {
     const { authorization } = req.headers;
@@ -102,11 +158,9 @@ app.get(
     next();
   },
   (req, res) => {
-    // Se chegarmos a este ponto, a solicitação é válida e o token de acesso foi verificado.
     res.json({ message: "Esta é uma rota apenas para admin." });
   }
 );
-
 
 app.post(
   "/auth/refresh_token",
@@ -122,14 +176,12 @@ app.post(
       });
     }
 
-    // Extrai o ID do cliente e o segredo do cliente do cabeçalho de autorização
     const credentials = Buffer.from(authorization.split(" ")[1], "base64")
       .toString("utf8")
       .split(":");
     const clientId = credentials[0];
     const clientSecret = credentials[1];
 
-    // Adicione o ID do cliente, o segredo do cliente e o tipo de concessão ao corpo da solicitação
     req.body.client_id = clientId;
     req.body.client_secret = clientSecret;
     req.body.grant_type = "refresh_token";
@@ -155,7 +207,6 @@ app.post(
       });
     }
 
-    // Extrai o token de acesso do cabeçalho de autorização
     const accessToken = authorization.split(" ")[1];
 
     const token = await prismadb.token.findUnique({
@@ -172,10 +223,38 @@ app.post(
       });
     }
 
-    // Use a função revokeToken para invalidar o token de acesso
     await model.revokeToken(token);
 
     return res.json({ message: "Logout realizado com sucesso." });
+  }
+);
+
+app.get(
+  "/user",
+  refreshTokenIfExpired,
+  oauthServer.authenticate(),
+  async (req: Request, res: Response) => {
+    const { authorization } = req.headers;
+    if (!authorization) {
+      return res.status(401).json({
+        message: "Cabeçalho de autorização é obrigatório",
+      });
+    }
+
+    const accessToken = authorization.split(" ")[1];
+
+    const token = await prismadb.token.findUnique({
+      where: { accessToken: accessToken },
+      include: { user: true },
+    });
+
+    if (!token || token.revoked) {
+      return res.status(403).json({
+        message: "Token inválido ou revogado",
+      });
+    }
+
+    res.json(token.user);
   }
 );
 
