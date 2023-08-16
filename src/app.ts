@@ -50,11 +50,8 @@ app.post(
     const { authorization } = req.headers;
 
     if (!username || !password || !authorization) {
-      console.log(
-        "Username, senha e cabeçalho de autorização são obrigatórios."
-      );
       return res.status(400).json({
-        message: "Username, senha e cabeçalho de autorização são obrigatórios.",
+        message: "Usuário e senha são obrigatórios.",
       });
     }
 
@@ -63,9 +60,9 @@ app.post(
     });
 
     if (!userExists) {
-      console.log("Username, não encontrado.");
+      console.log("Erro na autenticação.");
       return res.status(400).json({
-        message: "Username, não encontrado.",
+        message: "Erro na autenticação.",
       });
     }
 
@@ -76,7 +73,7 @@ app.post(
     if (!match) {
       console.log("Senha incorreta!");
       return res.status(400).json({
-        message: "Senha incorreta.",
+        message: "Erro na autenticação.",
       });
     }
 
