@@ -4,7 +4,6 @@ import model from "./model";
 const oauth = new OAuthServer({
   model: model,
   accessTokenLifetime: 60 * 60 * 24,
-  //accessTokenLifetime: 5,
   allowEmptyState: false,
   allowExtendedTokenAttributes: true,
 });

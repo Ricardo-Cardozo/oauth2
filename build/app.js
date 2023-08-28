@@ -46,6 +46,8 @@ var prismadb_1 = __importDefault(require("./lib/prismadb"));
 var cors_1 = __importDefault(require("cors"));
 var refresh_token_if_expired_1 = __importDefault(require("./middleware/refresh-token-if-expired"));
 var bcrypt_1 = require("bcrypt");
+var config_1 = __importDefault(require("./config"));
+(0, config_1.default)();
 var app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
@@ -56,48 +58,89 @@ var corsOptions = {
     optionsSuccessStatus: 204,
 };
 app.use((0, cors_1.default)(corsOptions));
+app.post("/newuser", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, username, password, name, status, type, _b, id, secondname, gener, salt, passwordHash, user;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                _a = req.body, username = _a.username, password = _a.password, name = _a.name, status = _a.status, type = _a.type, _b = _a.id, id = _b === void 0 ? 1 : _b, secondname = _a.secondname, gener = _a.gener;
+                return [4 /*yield*/, (0, bcrypt_1.genSalt)(12)];
+            case 1:
+                salt = _c.sent();
+                return [4 /*yield*/, (0, bcrypt_1.hash)(password, salt)];
+            case 2:
+                passwordHash = _c.sent();
+                return [4 /*yield*/, prismadb_1.default.user.create({
+                        data: {
+                            name: name,
+                            username: username,
+                            secondname: secondname,
+                            gener: gener,
+                            password: passwordHash,
+                            status: status,
+                            type: type,
+                            idUserCreated: id,
+                            idUserUpdated: id,
+                        },
+                        select: {
+                            gener: true,
+                            secondname: true,
+                            id: true,
+                            username: true,
+                            name: true,
+                            type: true,
+                            status: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            idUserCreated: true,
+                            idUserUpdated: true,
+                        },
+                    })];
+            case 3:
+                user = _c.sent();
+                return [2 /*return*/, res.status(200).json({ user: user, message: "Usuário criado com sucesso" })];
+        }
+    });
+}); });
 app.post("/auth/login", function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, username, password, authorization, userExists, match, credentials, clientId, clientSecret;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var _a, username, password, authorization, userExists, match, encodedCredentials, _b, encodedClientId, encodedClientSecret;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
                 console.log("Rota /auth/login acionada");
                 _a = req.body, username = _a.username, password = _a.password;
                 authorization = req.headers.authorization;
                 if (!username || !password || !authorization) {
-                    console.log("Username, senha e cabeçalho de autorização são obrigatórios.");
                     return [2 /*return*/, res.status(400).json({
-                            message: "Username, senha e cabeçalho de autorização são obrigatórios.",
+                            message: "Usuário e senha são obrigatórios.",
                         })];
                 }
                 return [4 /*yield*/, prismadb_1.default.user.findUnique({
                         where: { username: username },
                     })];
             case 1:
-                userExists = _b.sent();
+                userExists = _c.sent();
                 if (!userExists) {
-                    console.log("Username, não encontrado.");
+                    console.log("Erro na autenticação.");
                     return [2 /*return*/, res.status(400).json({
-                            message: "Username, não encontrado.",
+                            message: "Erro na autenticação.",
                         })];
                 }
                 console.log(userExists.password);
                 return [4 /*yield*/, (0, bcrypt_1.compare)(password, userExists.password)];
             case 2:
-                match = _b.sent();
+                match = _c.sent();
                 if (!match) {
                     console.log("Senha incorreta!");
                     return [2 /*return*/, res.status(400).json({
-                            message: "Senha incorreta.",
+                            message: "Erro na autenticação.",
                         })];
                 }
-                credentials = Buffer.from(authorization.split(" ")[1], "base64")
-                    .toString("utf8")
-                    .split(":");
-                clientId = credentials[0];
-                clientSecret = credentials[1];
-                req.body.client_id = clientId;
-                req.body.client_secret = clientSecret;
+                encodedCredentials = authorization.split(" ")[1];
+                _b = encodedCredentials.split(":"), encodedClientId = _b[0], encodedClientSecret = _b[1];
+                console.log("retorno do encodedCredentials: ", encodedCredentials);
+                req.body.client_id = encodedClientId;
+                req.body.client_secret = encodedClientSecret;
                 req.body.grant_type = "password";
                 return [2 /*return*/, server_1.default.token({
                         requireClientAuthentication: { password: true },
@@ -241,7 +284,24 @@ app.get("/user", refresh_token_if_expired_1.default, server_1.default.authentica
                 accessToken = authorization.split(" ")[1];
                 return [4 /*yield*/, prismadb_1.default.token.findUnique({
                         where: { accessToken: accessToken },
-                        include: { user: true },
+                        include: {
+                            user: {
+                                select: {
+                                    theme: true,
+                                    gener: true,
+                                    secondname: true,
+                                    id: true,
+                                    username: true,
+                                    name: true,
+                                    type: true,
+                                    status: true,
+                                    createdAt: true,
+                                    updatedAt: true,
+                                    idUserCreated: true,
+                                    idUserUpdated: true,
+                                },
+                            },
+                        },
                     })];
             case 1:
                 token = _a.sent();
@@ -255,5 +315,6 @@ app.get("/user", refresh_token_if_expired_1.default, server_1.default.authentica
         }
     });
 }); });
-// Inicie o servidor
-app.listen(3001, function () { return console.log("Server started on port 3001"); });
+app.listen(3001, function () {
+    return console.log("Server started on port 3001", process.env.NODE_ENV, process.env.DATABASE_URL);
+});

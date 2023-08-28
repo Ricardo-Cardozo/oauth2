@@ -8,6 +8,7 @@ var model_1 = __importDefault(require("./model"));
 var oauth = new express_oauth_server_1.default({
     model: model_1.default,
     accessTokenLifetime: 60 * 60 * 24,
+    //accessTokenLifetime: 5,
     allowEmptyState: false,
     allowExtendedTokenAttributes: true,
 });

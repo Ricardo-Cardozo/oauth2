@@ -1,17 +1,22 @@
 {
   "compilerOptions": {
-    "target": "es5",                                
-    "lib": ["ES6"],                                        
-    "module": "commonjs",                               
-    "rootDir": "src",                                 
-    "resolveJsonModule": true,                       
-    "allowJs": true,                                  
-    "outDir": "build",                                   
-    "esModuleInterop": true,                             
-    "forceConsistentCasingInFileNames": true,            
-    "strict": true,                                      
-    "noImplicitAny": true,                            
-    "strictPropertyInitialization": false,             
-    "skipLibCheck": true                                 
-  }
+    "target": "es5",
+    "lib": [
+      "ES6"
+    ],
+    "module": "commonjs",
+    "rootDir": "./src",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "outDir": "./build",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "./src/**/*.ts",
+  ]
 }

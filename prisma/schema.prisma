@@ -9,17 +9,33 @@ datasource db {
 }
 
 model User {
-  id            Int        @id @default(autoincrement())
-  username      String     @unique
-  name          String
-  password      String
-  type          UserType
-  status        UserStatus
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  idUserCreated Int
-  idUserUpdated Int
-  Token         Token[]
+  id                Int         @id @default(autoincrement())
+  username          String      @unique
+  name              String
+  secondname        String
+  password          String
+  gener             Avatar
+  type              UserType
+  theme             ThemePage   @default(light)
+  status            UserStatus
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  idUserCreated     Int
+  idUserUpdated     Int
+  Token             Token[]
+  createdTranslates Translate[] @relation("CreateRelation")
+  updatedTranslates Translate[] @relation("UpdateRelation")
+}
+
+enum Avatar {
+  female
+  male
+  others
+}
+
+enum ThemePage {
+  dark
+  light
 }
 
 enum UserType {
@@ -42,6 +58,11 @@ model Translate {
   updatedAt     DateTime @updatedAt
   idUserCreated Int
   idUserUpdated Int
+  userCreated   User     @relation(name: "CreateRelation", fields: [idUserCreated], references: [id])
+  userUpdated   User     @relation(name: "UpdateRelation", fields: [idUserUpdated], references: [id])
+
+  @@index([idUserCreated])
+  @@index([idUserUpdated])
 }
 
 model Token {
@@ -49,20 +70,20 @@ model Token {
   accessTokenExpires  DateTime
   refreshToken        String   @unique
   refreshTokenExpires DateTime
-  client              Client   @relation(fields: [clientId], references: [id])
-  clientId            Int
-  user                User     @relation(fields: [userId], references: [id])
-  userId              Int
+  client              Client   @relation(fields: [clientName], references: [name])
+  clientName          String
+  user                User     @relation(fields: [username], references: [username])
+  username            String
   scope               String
   revoked             Boolean  @default(false)
 
-  @@index([clientId])
-  @@index([userId])
+  @@index([clientName])
+  @@index([username])
 }
 
 model Client {
   id     Int     @id @default(autoincrement())
-  name   String
+  name   String  @unique
   secret String
   tokens Token[]
 }

@@ -1,4 +1,7 @@
 "use strict";
+// import prismadb from "../lib/prismadb";
+// import { User, Client } from "@prisma/client";
+// import { compare } from "bcrypt";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -50,9 +53,136 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// const getClientData = (client: Client) => ({
+//   id: client.id.toString(),
+//   clientSecret: client.secret,
+//   grants: ["password", "refresh_token"],
+// });
+// const getUserData = (user: User) => ({
+//   id: user.id.toString(),
+//   username: user.username,
+//   type: user.type,
+// });
+// const model = {
+//   getClient: async function (clientId: string, clientSecret: string) {
+//     console.log("Função getClient acionada getClient");
+//     const client = await prismadb.client.findUnique({
+//       where: { id: Number(clientId) },
+//     });
+//     if (!client || client.secret !== clientSecret) {
+//       console.log("nenhum client encontrado");
+//       return null;
+//     }
+//     console.log("retorno client: ", client);
+//     console.log("retorno do getClientData", getClientData(client));
+//     return getClientData(client);
+//   },
+//   getUser: async function (username: string, password: string) {
+//     console.log("Função getUser acionado");
+//     console.log("username: ", username);
+//     console.log("password: ", password);
+//     const user = await prismadb.user.findUnique({
+//       where: { username: username },
+//     });
+//     console.log("retorno do usuário: ", user);
+//     if (!user) {
+//       console.log("Usuário não encontrado!");
+//       return null;
+//     }
+//     const match = await compare(password, user.password);
+//     if (!match) {
+//       console.log("Senha incorreta!");
+//       return null;
+//     }
+//     console.log("retorno getUserData: ", getUserData(user));
+//     return getUserData(user);
+//   },
+//   saveToken: async function (token: any, client: any, user: any) {
+//     console.log("Função saveToken acionado");
+//     console.log("Retorno type: ", user.type);
+//     const createdToken = await prismadb.token.create({
+//       data: {
+//         accessToken: token.accessToken,
+//         accessTokenExpires: token.accessTokenExpiresAt,
+//         refreshToken: token.refreshToken,
+//         refreshTokenExpires: token.refreshTokenExpiresAt,
+//         client: { connect: { id: Number(client.id) } },
+//         user: { connect: { id: Number(user.id) } },
+//         scope: user.type,
+//       },
+//     });
+//     console.log("Token criado: ", createdToken);
+//     return {
+//       ...token,
+//       client: getClientData(client),
+//       user: getUserData(user),
+//       scope: user.type,
+//     };
+//   },
+//   getAccessToken: async function (accessToken: string) {
+//     console.log("Função getAccessToken acionado");
+//     const token = await prismadb.token.findUnique({
+//       where: { accessToken: accessToken },
+//       include: {
+//         user: true,
+//         client: true,
+//       },
+//     });
+//     if (!token) {
+//       console.log("Token não encontrado!");
+//       return null;
+//     }
+//     return {
+//       accessToken: token.accessToken,
+//       client: getClientData(token.client),
+//       user: getUserData(token.user),
+//       accessTokenExpiresAt: token.accessTokenExpires,
+//       scope: token.scope,
+//     };
+//   },
+//   getRefreshToken: async function (refreshToken: string) {
+//     console.log("Função getRefreshToken acionado");
+//     const token = await prismadb.token.findUnique({
+//       where: { refreshToken: refreshToken },
+//       include: {
+//         user: true,
+//         client: true,
+//       },
+//     });
+//     if (!token) {
+//       console.log("Refresh Token não encontrado!");
+//       return null;
+//     }
+//     return {
+//       accessToken: token.accessToken,
+//       refreshToken: token.refreshToken,
+//       client: getClientData(token.client),
+//       user: getUserData(token.user),
+//       refreshTokenExpiresAt: token.refreshTokenExpires,
+//       scope: token.scope,
+//     };
+//   },
+//   revokeToken: async function (token: any) {
+//     const revokedToken = await prismadb.token.update({
+//       where: { accessToken: token.accessToken },
+//       data: { revoked: true },
+//     });
+//     return !!revokedToken;
+//   },
+//   verifyScope: async function (token: any, scope: any) {
+//     console.log("Função verifyScope acionado");
+//     if (token.scope === scope) {
+//       return true;
+//     }
+//     console.log("Escopo do token inválido!");
+//     return false;
+//   },
+// };
+// export default model;
 var prismadb_1 = __importDefault(require("../lib/prismadb"));
+var bcrypt_1 = require("bcrypt");
 var getClientData = function (client) { return ({
-    id: client.id.toString(),
+    id: client.name,
     clientSecret: client.secret,
     grants: ["password", "refresh_token"],
 }); };
@@ -69,8 +199,8 @@ var model = {
                 switch (_a.label) {
                     case 0:
                         console.log("Função getClient acionada getClient");
-                        return [4 /*yield*/, prismadb_1.default.client.findUnique({
-                                where: { id: Number(clientId) },
+                        return [4 /*yield*/, prismadb_1.default.client.findFirst({
+                                where: { name: clientId },
                             })];
                     case 1:
                         client = _a.sent();
@@ -87,7 +217,7 @@ var model = {
     },
     getUser: function (username, password) {
         return __awaiter(this, void 0, void 0, function () {
-            var user;
+            var user, match;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -104,11 +234,13 @@ var model = {
                             console.log("Usuário não encontrado!");
                             return [2 /*return*/, null];
                         }
-                        // const match = await compare(password, user.password);
-                        // if (!match) {
-                        //   console.log("Senha incorreta!");
-                        //   return null;
-                        // }
+                        return [4 /*yield*/, (0, bcrypt_1.compare)(password, user.password)];
+                    case 2:
+                        match = _a.sent();
+                        if (!match) {
+                            console.log("Senha incorreta!");
+                            return [2 /*return*/, null];
+                        }
                         console.log("retorno getUserData: ", getUserData(user));
                         return [2 /*return*/, getUserData(user)];
                 }
@@ -129,8 +261,8 @@ var model = {
                                     accessTokenExpires: token.accessTokenExpiresAt,
                                     refreshToken: token.refreshToken,
                                     refreshTokenExpires: token.refreshTokenExpiresAt,
-                                    client: { connect: { id: Number(client.id) } },
-                                    user: { connect: { id: Number(user.id) } },
+                                    client: { connect: { name: client.id } },
+                                    user: { connect: { username: user.username } },
                                     scope: user.type,
                                 },
                             })];

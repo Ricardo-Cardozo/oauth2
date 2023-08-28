@@ -31,8 +31,9 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "build": "rm -rf ./build && tsc",
-    "start": "nodemon"
+    "dev": "NODE_ENV=development nodemon",
+    "start": "NODE_ENV=production node ./build/app.js",
+    "build": "rm -rf ./build && tsc"
   },
   "author": "",
   "license": "ISC",

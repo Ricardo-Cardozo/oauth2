@@ -1,9 +1,10 @@
+import { IToken, IReturnData } from "./../types/token";
 import prismadb from "../lib/prismadb";
 import { User, Client } from "@prisma/client";
 import { compare } from "bcrypt";
 
 const getClientData = (client: Client) => ({
-  id: client.id.toString(),
+  id: client.name,
   clientSecret: client.secret,
   grants: ["password", "refresh_token"],
 });
@@ -18,8 +19,8 @@ const model = {
   getClient: async function (clientId: string, clientSecret: string) {
     console.log("Função getClient acionada getClient");
 
-    const client = await prismadb.client.findUnique({
-      where: { id: Number(clientId) },
+    const client = await prismadb.client.findFirst({
+      where: { name: clientId },
     });
 
     if (!client || client.secret !== clientSecret) {
@@ -73,8 +74,8 @@ const model = {
         accessTokenExpires: token.accessTokenExpiresAt,
         refreshToken: token.refreshToken,
         refreshTokenExpires: token.refreshTokenExpiresAt,
-        client: { connect: { id: Number(client.id) } },
-        user: { connect: { id: Number(user.id) } },
+        client: { connect: { name: client.id.toString() } },
+        user: { connect: { username: user.username } },
         scope: user.type,
       },
     });
@@ -88,7 +89,6 @@ const model = {
       scope: user.type,
     };
   },
-
   getAccessToken: async function (accessToken: string) {
     console.log("Função getAccessToken acionado");
     const token = await prismadb.token.findUnique({
@@ -147,7 +147,7 @@ const model = {
     return !!revokedToken;
   },
 
-  verifyScope: async function (token: any, scope: any) {
+  verifyScope: async function (token: any, scope: string) {
     console.log("Função verifyScope acionado");
 
     if (token.scope === scope) {

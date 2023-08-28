@@ -5,6 +5,9 @@ import prismadb from "./lib/prismadb";
 import cors from "cors";
 import refreshTokenIfExpired from "./middleware/refresh-token-if-expired";
 import { compare, genSalt, hash } from "bcrypt";
+import configEnv from "./config";
+
+configEnv();
 
 const app = express();
 
@@ -21,7 +24,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.post("/newuser", async (req: Request, res: Response) => {
-  const { username, password, name, status, type, id = 1 } = req.body;
+  const {
+    username,
+    password,
+    name,
+    status,
+    type,
+    id = 1,
+    secondname,
+    gener,
+  } = req.body;
 
   const salt = await genSalt(12);
   const passwordHash = await hash(password, salt);
@@ -30,11 +42,26 @@ app.post("/newuser", async (req: Request, res: Response) => {
     data: {
       name,
       username,
+      secondname,
+      gener,
       password: passwordHash,
       status,
       type,
       idUserCreated: id,
       idUserUpdated: id,
+    },
+    select: {
+      gener: true,
+      secondname: true,
+      id: true,
+      username: true,
+      name: true,
+      type: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      idUserCreated: true,
+      idUserUpdated: true,
     },
   });
 
@@ -77,14 +104,14 @@ app.post(
       });
     }
 
-    const credentials = Buffer.from(authorization.split(" ")[1], "base64")
-      .toString("utf8")
-      .split(":");
-    const clientId = credentials[0];
-    const clientSecret = credentials[1];
+    const encodedCredentials = authorization.split(" ")[1];
+    const [encodedClientId, encodedClientSecret] =
+      encodedCredentials.split(":");
 
-    req.body.client_id = clientId;
-    req.body.client_secret = clientSecret;
+    console.log("retorno do encodedCredentials: ", encodedCredentials);
+
+    req.body.client_id = encodedClientId;
+    req.body.client_secret = encodedClientSecret;
     req.body.grant_type = "password";
 
     return oauthServer.token({
@@ -242,7 +269,24 @@ app.get(
 
     const token = await prismadb.token.findUnique({
       where: { accessToken: accessToken },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            theme: true,
+            gener: true,
+            secondname: true,
+            id: true,
+            username: true,
+            name: true,
+            type: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            idUserCreated: true,
+            idUserUpdated: true,
+          },
+        },
+      },
     });
 
     if (!token || token.revoked) {
@@ -255,5 +299,6 @@ app.get(
   }
 );
 
-// Inicie o servidor
-app.listen(3001, () => console.log("Server started on port 3001"));
+app.listen(3001, () =>
+  console.log("Server started on port 3001", process.env.NODE_ENV, process.env.DATABASE_URL)
+);
